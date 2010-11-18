@@ -26,10 +26,11 @@
 (defn run [inbox process]
   (letfn [(start [opts]
             (broadcast process (serialize [:election (id process)]))
-            #(set-master opts (id process)))
+            #(set-master opts (:master opts)))
           (set-master [opts master]
-            (master-elected process master)
-            #(continue (assoc opts :master (id process))))
+            (when (not= (:master opts) master)
+              (master-elected process master))
+            #(continue (assoc opts :master master)))
           (continue [opts]
             (when (continue? process) #(wait opts)))
           (wait [opts]
