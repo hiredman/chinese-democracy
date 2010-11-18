@@ -5,10 +5,6 @@
            [org.apache.commons.codec.binary Base64]
            [java.io ByteArrayOutputStream ObjectOutputStream]))
 
-(defn log [pid & x]
-  (locking #'println
-    (apply println (str pid ">") x)))
-
 (defn uuidbytes []
   (let [uuid (UUID/randomUUID)]
     (with-open [baos (ByteArrayOutputStream.)
@@ -40,42 +36,36 @@
       (.send socket
              (DatagramPacket.
               bytes (count bytes) group 6789))
-      (log (Date.) "sent packet")
       (catch Exception e
-        (println e))))
+        (.printStackTrace e))))
   (receive [el]
     (try
       (let [bytes (byte-array 100)
             packet (DatagramPacket. bytes (count bytes))]
         (.receive socket packet)
-        (log (Date.) "recieved packet")
         bytes)
       (catch Exception e
-        (println e))))
+        (.printStackTrace e))))
   (master-elected [el id]
     (future
-      (if (= id pid)
-        (swap! state inc)
-        (reset! state 0))
-      (log pid id "is the master")
+      (log el (str pid " says master is " id))
       (when (= id pid)
         (growl {:title pid
                 :message "I am the master"}))))
   (id [_] pid)
-  (election-interval [_] 30)
-  (continue? [_]
-    (if (> 20 @state)
-      true
-      (do
-        (future
-          (growl {:title pid :message "expired"}))
-        false)))
+  (election-interval [_] 10)
+  (continue? [el]
+    (not (= 1 (rand-int 50))))
   (handle-exception [_ exception]
-    (.printStackTrace exception)))
+    (.printStackTrace exception))
+  (log [_ string]
+    (locking #'println
+      (println (str (Date.) pid ">") string))))
 
 (defn mcast []
   (let [group (InetAddress/getByName "228.5.6.7")
         s (doto (MulticastSocket. 6789)
             (.joinGroup group))
         id (generate-id)]
-    (Multicast. group s id (atom 0))))
+    (Multicast. group s id (atom {:master? false
+                                  :count 0}))))
