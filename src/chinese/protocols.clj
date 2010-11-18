@@ -7,4 +7,5 @@
   (id [el] "id of this node, must a unique string, less then 90 bytes")
   (election-interval [el] "how long an election lasts in seconds")
   (continue? [el])
-  (handle-exception [el exception]))
+  (handle-exception [el exception])
+  (log [el string]))
