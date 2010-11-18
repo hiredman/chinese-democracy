@@ -6,4 +6,5 @@
   (master-elected [el id] "called when a master is elected")
   (id [el] "id of this node, must a unique string, less then 90 bytes")
   (election-interval [el] "how long an election lasts in seconds")
-  (continue? [el]))
+  (continue? [el])
+  (handle-exception [el exception]))

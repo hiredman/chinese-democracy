@@ -31,8 +31,7 @@
             (master-elected process master)
             #(continue (assoc opts :master (id process))))
           (continue [opts]
-            (when (continue? process)
-              #(wait opts)))
+            (when (continue? process) #(wait opts)))
           (wait [opts]
             (let [[type node-id] (msg inbox (timeout process opts))]
               (cond
@@ -67,12 +66,12 @@
       (try
         (run inq p)
         (catch Exception e
-          (.printStackTrace e))
+          (handle-exception p e))
         (finally
          (try
            (future-cancel infut)
            (catch Exception e
-             (.printStackTrace e))))))))
+             (handle-exception p e))))))))
 
 (defn -main [& args]
   (while true

@@ -69,7 +69,9 @@
       (do
         (future
           (growl {:title pid :message "expired"}))
-        false))))
+        false)))
+  (handle-exception [_ exception]
+    (.printStackTrace exception)))
 
 (defn mcast []
   (let [group (InetAddress/getByName "228.5.6.7")
