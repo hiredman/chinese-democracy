@@ -57,7 +57,8 @@
   (continue? [el]
     (not (= 1 (rand-int 50))))
   (handle-exception [_ exception]
-    (.printStackTrace exception))
+    (locking #'println
+      (.printStackTrace exception)))
   (log [_ string]
     (locking #'println
       (println (str (Date.) pid ">") string))))

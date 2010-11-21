@@ -32,32 +32,38 @@
               (master-elected process master))
             #(continue (assoc opts :master master)))
           (continue [opts]
-            (when (continue? process) #(wait opts)))
-          (wait [opts]
-            (let [[type node-id] (msg inbox (timeout process opts))]
-              (cond
-               (nil? node-id) #(victory opts)
-               (= node-id (id process)) #(continue opts)
-               (gt (id process) node-id) #(lesser-node node-id type opts)
-               :else #(greater-node node-id type opts))))
+            (when (continue? process)
+              #(wait opts (msg inbox (timeout process opts)))))
+          (wait [opts [type node-id]]
+            (log process (str :wait " " (:master opts)))
+            (cond
+             (nil? node-id) #(victory opts)
+             (= node-id (id process)) #(continue opts)
+             (gt (id process) node-id) #(lesser-node node-id type opts)
+             :else #(greater-node node-id type opts)))
           (victory [opts]
-            (broadcast process (serialize [:victory (id process)]))
+            (broadcast process (serialize [:election (id process)]))
             #(set-master opts (id process)))
           (lesser-node [node-id type opts]
-            (if (or (= type :election)
-                    (= type :victory))
+            (if (and (or (= type :election)
+                         (= type :victory))
+                     (not (= (id process) node-id)))
               #(start opts)
               #(continue opts)))
           (greater-node [node-id type opts]
-            (if (gt node-id (:master opts))
-              #(continue (assoc opts :master node-id))
+            (if (or (gt node-id (:master opts))
+                    (= node-id (:master opts)))
+              #(set-master opts node-id)
               #(continue opts)))]
     (trampoline start {})))
 
 (defn handle-incomming [inq p]
   (future
     (while true
-      (.put inq (receive p)))))
+      (try
+        (.put inq (receive p))
+        (catch Exception e
+          (handle-exception p e))))))
 
 ;;I need to find a way to make this an agent
 (defn node [p]
