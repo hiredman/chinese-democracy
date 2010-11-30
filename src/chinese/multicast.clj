@@ -49,11 +49,9 @@
   (master-elected [el id]
     (future
       (log el (str pid " says master is " id))
-      (when (= id pid)
-        (growl {:title pid
-                :message "I am the master"}))))
+      (swap! state update-in [:master?] (constantly (= id pid)))))
   (id [_] pid)
-  (election-interval [_] 10)
+  (election-interval [_] 120)
   (continue? [el]
     (not (= 1 (rand-int 50))))
   (handle-exception [_ exception]
