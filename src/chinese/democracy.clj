@@ -13,12 +13,11 @@
 
 (defn timeout [process opts]
   (if (= (id process) (:master opts))
-    (* (election-interval process) 0.9)
+    (* (election-interval process) 0.2)
     (election-interval process)))
 
 (defn msg [inbox timeout]
-  (deserialize
-   (.poll inbox timeout TimeUnit/SECONDS)))
+  (.poll inbox timeout TimeUnit/SECONDS))
 
 (defn gt [a b]
   (pos? (compare a b)))
@@ -28,21 +27,20 @@
             (broadcast process (serialize [:election (id process)]))
             #(set-master opts (:master opts)))
           (set-master [opts master]
-            (when (not= (:master opts) master)
-              (master-elected process master))
+            (master-elected process master)
             #(continue (assoc opts :master master)))
           (continue [opts]
+            (println process)
             (when (continue? process)
               #(wait opts (msg inbox (timeout process opts)))))
           (wait [opts [type node-id]]
-            (log process (str :wait " " (:master opts)))
             (cond
              (nil? node-id) #(victory opts)
              (= node-id (id process)) #(continue opts)
              (gt (id process) node-id) #(lesser-node node-id type opts)
              :else #(greater-node node-id type opts)))
           (victory [opts]
-            (broadcast process (serialize [:election (id process)]))
+            (broadcast process (serialize [:victory (id process)]))
             #(set-master opts (id process)))
           (lesser-node [node-id type opts]
             (if (and (or (= type :election)
@@ -61,7 +59,9 @@
   (future
     (while true
       (try
-        (.put inq (receive p))
+        (let [msg (deserialize (receive p))]
+          (when (not= (id p) (second msg))
+            (.put inq msg)))
         (catch Exception e
           (handle-exception p e))))))
 
