@@ -31,32 +31,31 @@
 
 (defrecord Multicast [group socket pid state]
   Election
-  (broadcast [el bytes]
+  (broadcast [el some-bytes]
     (try
-      (.send socket
+      (.send ^MulticastSocket socket
              (DatagramPacket.
-              bytes (count bytes) group 6789))
+              ^bytes some-bytes (count some-bytes)
+              ^InetAddress group 6789))
       (catch Exception e
         (.printStackTrace e))))
   (receive [el]
     (try
       (let [bytes (byte-array 100)
             packet (DatagramPacket. bytes (count bytes))]
-        (.receive socket packet)
+        (.receive ^MulticastSocket socket packet)
         bytes)
       (catch Exception e
         (.printStackTrace e))))
   (master-elected [el id]
-    (future
-      (log el (str pid " says master is " id))
-      (swap! state update-in [:master?] (constantly (= id pid)))))
+    (swap! state update-in [:master?] (constantly (= id pid))))
   (id [_] pid)
   (election-interval [_] 120)
   (continue? [el]
     (not (= 1 (rand-int 50))))
   (handle-exception [_ exception]
     (locking #'println
-      (.printStackTrace exception)))
+      (.printStackTrace ^Exception exception)))
   (log [_ string]
     (locking #'println
       (println (str (Date.) pid ">") string))))

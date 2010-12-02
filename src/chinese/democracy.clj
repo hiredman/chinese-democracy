@@ -7,16 +7,16 @@
 (defn serialize [x]
   (.getBytes (pr-str x)))
 
-(defn deserialize [x]
+(defn deserialize [^bytes x]
   (when x
     (read-string (String. x "utf8"))))
 
 (defn timeout [process opts]
   (if (= (id process) (:master opts))
-    (* (election-interval process) 0.2)
+    (* (election-interval process) 0.5)
     (election-interval process)))
 
-(defn msg [inbox timeout]
+(defn msg [^LinkedBlockingQueue inbox ^long timeout]
   (.poll inbox timeout TimeUnit/SECONDS))
 
 (defn gt [a b]
@@ -30,7 +30,7 @@
             (master-elected process master)
             #(continue (assoc opts :master master)))
           (continue [opts]
-            (println process)
+            (log process (pr-str "master? " (:master? @(:state process))))
             (when (continue? process)
               #(wait opts (msg inbox (timeout process opts)))))
           (wait [opts [type node-id]]
@@ -55,9 +55,9 @@
               #(continue opts)))]
     (trampoline start {})))
 
-(defn handle-incomming [inq p]
-  (future
-    (while true
+(defn handle-incomming [^LinkedBlockingQueue inq p]
+  (Thread.
+   #(while true
       (try
         (let [msg (deserialize (receive p))]
           (when (not= (id p) (second msg))
@@ -68,18 +68,23 @@
 ;;I need to find a way to make this an agent
 (defn node [p]
   (let [inq (LinkedBlockingQueue.)
-        infut (handle-incomming inq p)]
-    (future
-      (try
-        (run inq p)
-        (catch Exception e
-          (handle-exception p e))
-        (finally
-         (try
-           (future-cancel infut)
-           (catch Exception e
-             (handle-exception p e))))))))
+        infut (doto (handle-incomming inq p)
+                (.setName (str "In " (id p)))
+                .start)]
+    (doto (Thread.
+           #(try
+              (run inq p)
+              (catch Exception e
+                (handle-exception p e))
+              (finally
+               (try
+                 (.stop infut)
+                 (catch Exception e
+                   (handle-exception p e))))))
+      (.setName (id p)))))
 
 (defn -main [& args]
   (while true
-    @(node (mcast))))
+    (doto (node (mcast))
+      .start
+      .join)))
