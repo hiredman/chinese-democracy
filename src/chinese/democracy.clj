@@ -69,7 +69,7 @@
 (defn node [p]
   (let [inq (LinkedBlockingQueue.)
         infut (doto (handle-incomming inq p)
-                (.setName (str "In " (id p)))
+                (.setName (str "InQ " (id p)))
                 .start)]
     (doto (Thread.
            #(try
