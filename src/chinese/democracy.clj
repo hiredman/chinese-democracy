@@ -60,18 +60,20 @@
               #(continue opts)))]
     (trampoline start {})))
 
-(defn handle-incomming [^LinkedBlockingQueue inq p]
+(defn ^Thread handle-incomming [^LinkedBlockingQueue inq p]
   (Thread.
    #(while true
       (try
-        (let [msg (deserialize (receive p))]
+        (let [some-bytes (receive p)
+              msg (deserialize some-bytes)]
+          (return-bytes p some-bytes)
           (when (not= (id p) (second msg))
             (.put inq msg)))
         (catch Exception e
           (handle-exception p e))))))
 
 ;;I need to find a way to make this an agent
-(defn node [p]
+(defn ^Thread node [p]
   (let [inq (LinkedBlockingQueue.)
         infut (doto (handle-incomming inq p)
                 (.setName (str "InQ " (id p)))
