@@ -4,7 +4,8 @@
            [java.net InetAddress MulticastSocket DatagramPacket]
            [org.apache.commons.codec.binary Base64]
            [java.io ByteArrayOutputStream ObjectOutputStream]
-           [java.lang.management ManagementFactory]))
+           [java.lang.management ManagementFactory]
+           [java.util.concurrent LinkedBlockingQueue]))
 
 (defn uuidbytes []
   (let [uuid (UUID/randomUUID)]
@@ -34,7 +35,9 @@
         (cons "/usr/local/bin/growlnotify" (process-args m))))
       (doto .waitFor)))
 
-(defrecord Multicast [group socket pid state]
+(def buffer-size 100)
+
+(defrecord Multicast [group socket pid state buffers]
   Election
   (broadcast [el some-bytes]
     (try
@@ -46,12 +49,14 @@
         (.printStackTrace e))))
   (receive [el]
     (try
-      (let [bytes (byte-array 100)
+      (let [bytes (.take ^LinkedBlockingQueue buffers)
             packet (DatagramPacket. bytes (count bytes))]
         (.receive ^MulticastSocket socket packet)
         bytes)
       (catch Exception e
         (.printStackTrace e))))
+  (return-bytes [el some-bytes]
+    (.put ^LinkedBlockingQueue buffers some-bytes))
   (chairman-elected [el id]
     (swap! state update-in [:chairman?] (constantly (= id pid))))
   (id [_] pid)
@@ -69,6 +74,10 @@
   (let [group (InetAddress/getByName "228.5.6.7")
         s (doto (MulticastSocket. 6789)
             (.joinGroup group))
-        id (generate-id)]
+        id (generate-id)
+        buffers (doto (LinkedBlockingQueue.)
+                  (.put (byte-array buffer-size))
+                  (.put (byte-array buffer-size)))]
     (Multicast. group s id (atom {:chairman? false
-                                  :count 0}))))
+                                  :count 0})
+                buffers)))
