@@ -63,7 +63,7 @@
       (.printStackTrace ^Exception exception)))
   (log [_ string]
     (locking #'println
-      (println (str (Date.) pid ">") string))))
+      (println (format "%s %s> %s" (Date.) pid string)))))
 
 (defn mcast []
   (let [group (InetAddress/getByName "228.5.6.7")
