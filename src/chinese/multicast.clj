@@ -3,7 +3,8 @@
   (:import [java.util Date UUID]
            [java.net InetAddress MulticastSocket DatagramPacket]
            [org.apache.commons.codec.binary Base64]
-           [java.io ByteArrayOutputStream ObjectOutputStream]))
+           [java.io ByteArrayOutputStream ObjectOutputStream]
+           [java.lang.management ManagementFactory]))
 
 (defn uuidbytes []
   (let [uuid (UUID/randomUUID)]
@@ -16,7 +17,11 @@
       (.toByteArray baos))))
 
 (defn generate-id []
-  (Base64/encodeBase64URLSafeString (uuidbytes)))
+  (format "%s-%s-%s"
+          (rand-int 1024)
+          (.getHostName (InetAddress/getLocalHost))
+          (-> (ManagementFactory/getRuntimeMXBean)
+              .getName (.split "@") first)))
 
 (defn process-args [m]
   (mapcat (fn [[flag value]] [(format "--%s" (name flag)) value]) m))
@@ -47,23 +52,23 @@
         bytes)
       (catch Exception e
         (.printStackTrace e))))
-  (master-elected [el id]
-    (swap! state update-in [:master?] (constantly (= id pid))))
+  (chairman-elected [el id]
+    (swap! state update-in [:chairman?] (constantly (= id pid))))
   (id [_] pid)
-  (election-interval [_] 120)
+  (election-interval [_] 20)
   (continue? [el]
-    (not (= 1 (rand-int 50))))
+    (pos? (rand-int 50)))
   (handle-exception [_ exception]
     (locking #'println
       (.printStackTrace ^Exception exception)))
   (log [_ string]
     (locking #'println
-      (println (str (Date.) pid ">") string))))
+      (println (format "%s %s> %s" (Date.) pid string)))))
 
 (defn mcast []
   (let [group (InetAddress/getByName "228.5.6.7")
         s (doto (MulticastSocket. 6789)
             (.joinGroup group))
         id (generate-id)]
-    (Multicast. group s id (atom {:master? false
+    (Multicast. group s id (atom {:chairman? false
                                   :count 0}))))
