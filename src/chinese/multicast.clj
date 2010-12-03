@@ -57,7 +57,7 @@
   (id [_] pid)
   (election-interval [_] 120)
   (continue? [el]
-    (not (= 1 (rand-int 50))))
+    (pos? (rand-int 50)))
   (handle-exception [_ exception]
     (locking #'println
       (.printStackTrace ^Exception exception)))
