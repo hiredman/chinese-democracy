@@ -3,7 +3,8 @@
   (:import [java.util Date UUID]
            [java.net InetAddress MulticastSocket DatagramPacket]
            [org.apache.commons.codec.binary Base64]
-           [java.io ByteArrayOutputStream ObjectOutputStream]))
+           [java.io ByteArrayOutputStream ObjectOutputStream]
+           [java.lang.management ManagementFactory]))
 
 (defn uuidbytes []
   (let [uuid (UUID/randomUUID)]
@@ -16,7 +17,11 @@
       (.toByteArray baos))))
 
 (defn generate-id []
-  (Base64/encodeBase64URLSafeString (uuidbytes)))
+  (format "%s-%s-%s"
+          (rand-int 1024)
+          (.getHostName (InetAddress/getLocalHost))
+          (-> (ManagementFactory/getRuntimeMXBean)
+              .getName (.split "@") first)))
 
 (defn process-args [m]
   (mapcat (fn [[flag value]] [(format "--%s" (name flag)) value]) m))
