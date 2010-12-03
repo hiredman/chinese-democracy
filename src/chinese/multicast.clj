@@ -37,7 +37,7 @@
 
 (def buffer-size 100)
 
-(defrecord Multicast [group socket pid state buffers]
+(defrecord Multicast [group socket pid state manager]
   Election
   (broadcast [el some-bytes]
     (try
@@ -49,14 +49,13 @@
         (.printStackTrace e))))
   (receive [el]
     (try
-      (let [bytes (.take ^LinkedBlockingQueue buffers)
+      (let [bytes (alloc manager)
             packet (DatagramPacket. bytes (count bytes))]
         (.receive ^MulticastSocket socket packet)
         bytes)
       (catch Exception e
         (.printStackTrace e))))
-  (return-bytes [el some-bytes]
-    (.put ^LinkedBlockingQueue buffers some-bytes))
+  (buffer-manager [el] manager)
   (chairman-elected [el id]
     (swap! state update-in [:chairman?] (constantly (= id pid))))
   (id [_] pid)
@@ -80,4 +79,8 @@
                   (.put (byte-array buffer-size)))]
     (Multicast. group s id (atom {:chairman? false
                                   :count 0})
-                buffers)))
+                (reify BufferManager
+                  (alloc [el]
+                    (.take buffers))
+                  (free [el some-bytes]
+                    (.put buffers some-bytes))))))
