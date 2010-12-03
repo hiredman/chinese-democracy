@@ -12,7 +12,7 @@
     (read-string (String. x "utf8"))))
 
 (defn timeout [process opts]
-  (if (= (id process) (:master opts))
+  (if (= (id process) (:chairman opts))
     (* (election-interval process) 0.5)
     (election-interval process)))
 
@@ -25,12 +25,12 @@
 (defn run [inbox process]
   (letfn [(start [opts]
             (broadcast process (serialize [:election (id process)]))
-            #(set-master opts (:master opts)))
-          (set-master [opts master]
-            (master-elected process master)
-            #(continue (assoc opts :master master)))
+            #(set-chairman opts (:chairman opts)))
+          (set-chairman [opts chairman]
+            (chairman-elected process chairman)
+            #(continue (assoc opts :chairman chairman)))
           (continue [opts]
-            (log process (pr-str "master? " (:master? @(:state process))))
+            (log process (pr-str "chairman? " (:chairman? @(:state process))))
             (when (continue? process)
               #(wait opts (msg inbox (timeout process opts)))))
           (wait [opts [type node-id]]
@@ -41,17 +41,22 @@
              :else #(greater-node node-id type opts)))
           (victory [opts]
             (broadcast process (serialize [:victory (id process)]))
-            #(set-master opts (id process)))
+            #(set-chairman opts (id process)))
           (lesser-node [node-id type opts]
             (if (and (or (= type :election)
                          (= type :victory))
                      (not (= (id process) node-id)))
-              #(start opts)
+              (do
+                (log process
+                     (str "recieved "
+                          type " from " node-id
+                          " contesting!!!"))
+                #(start opts))
               #(continue opts)))
           (greater-node [node-id type opts]
-            (if (or (gt node-id (:master opts))
-                    (= node-id (:master opts)))
-              #(set-master opts node-id)
+            (if (or (gt node-id (:chairman opts))
+                    (= node-id (:chairman opts)))
+              #(set-chairman opts node-id)
               #(continue opts)))]
     (trampoline start {})))
 

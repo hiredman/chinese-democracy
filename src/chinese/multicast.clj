@@ -52,10 +52,10 @@
         bytes)
       (catch Exception e
         (.printStackTrace e))))
-  (master-elected [el id]
-    (swap! state update-in [:master?] (constantly (= id pid))))
+  (chairman-elected [el id]
+    (swap! state update-in [:chairman?] (constantly (= id pid))))
   (id [_] pid)
-  (election-interval [_] 120)
+  (election-interval [_] 20)
   (continue? [el]
     (pos? (rand-int 50)))
   (handle-exception [_ exception]
@@ -70,5 +70,5 @@
         s (doto (MulticastSocket. 6789)
             (.joinGroup group))
         id (generate-id)]
-    (Multicast. group s id (atom {:master? false
+    (Multicast. group s id (atom {:chairman? false
                                   :count 0}))))
