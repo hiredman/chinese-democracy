@@ -23,16 +23,15 @@
   (pos? (compare a b)))
 
 (defn run [inbox process]
-  (let [election (serialize [:election (id process)])
-        victory (serialize [:victory (id process)])]
+  (let [election-msg (serialize [:election (id process)])
+        victory-msg (serialize [:victory (id process)])]
     (letfn [(start [opts]
-              (broadcast process election)
+              (broadcast process election-msg)
               #(set-chairman opts (:chairman opts)))
             (set-chairman [opts chairman]
               (chairman-elected process chairman)
               #(continue (assoc opts :chairman chairman)))
             (continue [opts]
-              (log process (pr-str "chairman? " (:chairman? @(:state process))))
               (when (continue? process)
                 #(wait opts (msg inbox (timeout process opts)))))
             (wait [opts [type node-id]]
@@ -42,9 +41,10 @@
                (gt (id process) node-id) #(lesser-node node-id type opts)
                :else #(greater-node node-id type opts)))
             (victory [opts]
-              (broadcast process victory)
+              (broadcast process victory-msg)
               #(set-chairman opts (id process)))
             (lesser-node [node-id type opts]
+              ;;TODO: rip out this conditional
               (if (and (or (= type :election)
                            (= type :victory))
                        (not (= (id process) node-id)))

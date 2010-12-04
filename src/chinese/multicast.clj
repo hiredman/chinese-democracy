@@ -61,6 +61,7 @@
   (id [_] pid)
   (election-interval [_] 20)
   (continue? [el]
+    (log el (str "chairman? " (:chairman? @state)))
     (pos? (rand-int 50)))
   (handle-exception [_ exception]
     (locking #'println
