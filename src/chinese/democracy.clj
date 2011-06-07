@@ -62,7 +62,7 @@
                 #(continue opts)))]
       (trampoline start {}))))
 
-(defn ^Thread handle-incomming [^LinkedBlockingQueue inq p manager]
+(defn ^Thread handle-incoming [^LinkedBlockingQueue inq p manager]
   (Thread.
    #(while true
       (try
@@ -78,7 +78,7 @@
 (defn ^Thread node [p]
   (let [inq (LinkedBlockingQueue.)
         manager (buffer-manager p)
-        infut (doto (handle-incomming inq p manager)
+        infut (doto (handle-incoming inq p manager)
                 (.setName (str "InQ " (id p)))
                 .start)]
     (doto (Thread.
