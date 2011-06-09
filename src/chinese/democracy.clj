@@ -29,6 +29,7 @@
               (broadcast process election-msg)
               #(set-chairman opts (:chairman opts)))
             (set-chairman [opts chairman]
+              (log process (format "master elected: %s" chairman))
               (chairman-elected process chairman)
               #(continue (assoc opts :chairman chairman)))
             (continue [opts]
@@ -41,6 +42,7 @@
                (gt (id process) node-id) #(lesser-node node-id type opts)
                :else #(greater-node node-id type opts)))
             (victory [opts]
+              (log process (format "I won the election"))
               (broadcast process victory-msg)
               #(set-chairman opts (id process)))
             (lesser-node [node-id type opts]
