@@ -22,26 +22,38 @@
 (defn gt [a b]
   (pos? (compare a b)))
 
+;; bully algorithm state machine
 (defn run [inbox process]
+  ;; allocate and serialize the two possible messages to send once
+  ;; (cuts down on saw-tooth allocation profile)
   (let [election-msg (serialize [:election (id process)])
         victory-msg (serialize [:victory (id process)])]
     (letfn [(start [opts]
+              ;; start by annoucing to anyone listening that you want
+              ;; to be chairman
               (broadcast process election-msg)
+              ;; until you decide you've won, or some one else wins,
+              ;; set the chairman to be the chairman you started with (nil)
               #(set-chairman opts (:chairman opts)))
             (set-chairman [opts chairman]
               (log process (format "master elected: %s" chairman))
               (chairman-elected process chairman)
               #(continue (assoc opts :chairman chairman)))
             (continue [opts]
+              ;; this is a kill switch for stopping the statemachine
+              ;; if required
               (when (continue? process)
                 #(wait opts (msg inbox (timeout process opts)))))
             (wait [opts [type node-id]]
+              ;; wait for incoming messages and respond appropriately
               (cond
                (nil? node-id) #(victory opts)
                (= node-id (id process)) #(continue opts)
                (gt (id process) node-id) #(lesser-node node-id type opts)
                :else #(greater-node node-id type opts)))
             (victory [opts]
+              ;; broadcast your victory to others and set yourself to
+              ;; be the chairman
               (log process (format "I won the election"))
               (broadcast process victory-msg)
               #(set-chairman opts (id process)))
@@ -58,11 +70,14 @@
                   #(start opts))
                 #(continue opts)))
             (greater-node [node-id type opts]
+              ;; a greater node always gets to be chairman
               (if (or (gt node-id (:chairman opts))
                       (= node-id (:chairman opts)))
                 #(set-chairman opts node-id)
                 #(continue opts)))]
       (trampoline start {}))))
+
+;; TODO: remove calls to Thread#stop() use some kind of sentinal/kill switch
 
 (defn ^Thread handle-incomming [^LinkedBlockingQueue inq p manager]
   (Thread.
