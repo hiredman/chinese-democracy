@@ -47,6 +47,7 @@
             (wait [opts [type node-id]]
               ;; wait for incoming messages and respond appropriately
               (cond
+               (= :fault type) #(wait opts (msg inbox (timeout process opts)))
                (nil? node-id) #(victory opts)
                (= node-id (id process)) #(continue opts)
                (gt (id process) node-id) #(lesser-node node-id type opts)
