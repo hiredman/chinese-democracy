@@ -47,11 +47,14 @@
             (wait [opts [type node-id]]
               ;; wait for incoming messages and respond appropriately
               (cond
-               (= :fault type) #(wait opts (msg inbox (timeout process opts)))
+               (= :fault type) #(fault opts)
                (nil? node-id) #(victory opts)
                (= node-id (id process)) #(continue opts)
                (gt (id process) node-id) #(lesser-node node-id type opts)
                :else #(greater-node node-id type opts)))
+            (fault [opts]
+              (Thread/sleep (* 1000 (timeout process opts) 2))
+              #(wait opts (msg inbox (timeout process opts))))
             (victory [opts]
               ;; broadcast your victory to others and set yourself to
               ;; be the chairman
