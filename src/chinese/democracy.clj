@@ -1,7 +1,7 @@
 (ns chinese.democracy
   (:use [chinese.protocols]
         [chinese.multicast :only [mcast]])
-  (:import [java.util.concurrent LinkedBlockingQueue TimeUnit])
+  (:import (java.util.concurrent LinkedBlockingQueue TimeUnit))
   (:gen-class))
 
 (defn serialize [x]
