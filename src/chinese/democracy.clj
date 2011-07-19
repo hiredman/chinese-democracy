@@ -109,13 +109,12 @@
                  (gt node-id (id process)) (greater-node node-id type opts)
                  :else (lesser-node node-id type opts))))
             (submission [opts]
-              (log process "All shall submit to me")
               (broadcast process submission-msg)
               #(continue (assoc opts :last-activity (timestamp))))
             (victory [opts]
               ;; broadcast your victory to others and set yourself to
               ;; be the chairman
-              (log process (format "I won the election"))
+              (log process (format "I won the \"election\""))
               (broadcast process victory-msg)
               (chairman-elected process (id process))
               #(continue (assoc opts
