@@ -62,17 +62,11 @@
               (broadcast process victory-msg)
               #(set-chairman opts (id process)))
             (lesser-node [node-id type opts]
-              ;;TODO: rip out this conditional
-              (if (and (or (= type :election)
-                           (= type :victory))
-                       (not (= (id process) node-id)))
-                (do
-                  (log process
-                       (str "recieved "
-                            type " from " node-id
-                            " contesting!!!"))
-                  #(start opts))
-                #(continue opts)))
+              (log process
+                   (str "recieved "
+                        type " from " node-id
+                        " contesting!!!"))
+              #(start opts))
             (greater-node [node-id type opts]
               ;; a greater node always gets to be chairman
               (if (or (gt node-id (:chairman opts))
